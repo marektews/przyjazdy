@@ -33,6 +33,8 @@ const props = defineProps({
     },
 })
 
+const emit = defineEmits(['change'])
+
 const arrived = ref(props.bus.arrived)
 const datetime = ref(props.bus.datetime)
 
@@ -57,6 +59,7 @@ const onClick = () => {
         if(resp.status === 200) {
             arrived.value = !arrived.value
             datetime.value = new Date()
+            emit('change', 1)
         }
     })
 }

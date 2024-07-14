@@ -6,39 +6,69 @@
         <div class="text-center text-muted">
             Klikaj w kafelek, żeby zmieniać stan
         </div>
+        <div 
+            v-if="allBusesCnt > 0"
+            class="text-center text-muted"
+        >
+            Statystyka: {{ arrivalsCnt }} z {{ allBusesCnt }}
+        </div>
         <main class="mt-3">
             <BusItem 
                 v-for="(bus, index) of allBuses" 
                 :key="index"
                 :bus="bus"
+                @change="onBusItemChanged"
             />
         </main>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import BusItem from './BusItem.vue'
 
 const allBuses = ref([])
 const timer = ref(undefined)
 
-onMounted(() => {
-    updateData()
-    timer.value = setInterval(() => {
-        updateData()
-    }, 20000)
-})
-onUnmounted(() => {
-    if(timer.value) {
-        clearInterval(timer.value)
-        timer.value = undefined
-    }
+const allBusesCnt = computed(() => allBuses.value ? allBuses.value.length : 0)
+const arrivalsCnt = computed(() => {
+    let cnt = 0
+    allBuses.value.forEach((bus) => {
+        if(bus.arrived) ++cnt
+    })
+    return cnt
 })
 
+onMounted(() => {
+    updateData()
+    startTimer()
+})
+onUnmounted(() => stopTimer())
+
+const onBusItemChanged = (ev) => {
+    console.log("onBusItemChanged", ev)
+    updateData()
+}
+
+const stopTimer = () => {
+    if(timer.value) {
+        clearTimeout(timer.value)
+        timer.value = undefined
+    }
+}
+
+const startTimer = () => {
+    timer.value = setTimeout(() => {
+        updateData()
+    }, 20000)
+}
+
 const updateData = () => {
+    stopTimer()
+
     fetch("/api/arrivals/all")
     .then((resp) => {
+        startTimer()
         if(resp.status === 200)
             return resp.json()
         else
