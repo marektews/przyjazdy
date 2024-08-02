@@ -17,18 +17,67 @@
                 v-for="(bus, index) of allBuses" 
                 :key="index"
                 :bus="bus"
-                @change="onBusItemChanged"
+                @click="onBusItemClicked(bus)"
             />
         </main>
+
+        <div 
+            id="myModal"
+            class="modal fade" 
+            tabindex="-1"
+        >
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            Potwierdzenie
+                        </h5>
+                        <button 
+                            type="button" 
+                            class="btn-close" 
+                            data-bs-dismiss="modal" 
+                            aria-label="Close"
+                        />
+                    </div>
+                    <div class="modal-body">
+                        <h5>{{ bus_changing ? bus_changing.name : "" }}</h5>
+                        <p>Czy na pewno zmienić status autokaru?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button 
+                            type="button" 
+                            class="btn btn-secondary" 
+                            data-bs-dismiss="modal"
+                        >
+                            <FontAwesomeIcon :icon="faChevronLeft" />
+                            <span class="ms-2">Anuluj</span>
+                        </button>
+                        <button 
+                            type="button" 
+                            class="btn btn-primary" 
+                            data-bs-dismiss="modal"
+                            @click="onChangeState"
+                        >
+                            <FontAwesomeIcon :icon="faCircleCheck" />
+                            <span class="ms-2">Zmień</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { Modal } from 'bootstrap'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faChevronLeft, faCircleCheck } from '@fortawesome/free-solid-svg-icons';
 import BusItem from './BusItem.vue'
 
 const allBuses = ref([])
 const timer = ref(undefined)
+const bus_changing = ref(undefined)
 
 const allBusesCnt = computed(() => allBuses.value ? allBuses.value.length : 0)
 const arrivalsCnt = computed(() => {
@@ -45,13 +94,33 @@ onMounted(() => {
 })
 onUnmounted(() => stopTimer())
 
-const onBusItemChanged = (ev) => {
-    console.log("onBusItemChanged", ev)
-    updateData()
+const onBusItemClicked = (bus) => {
+    bus_changing.value = bus
+    const dlg = new Modal('#myModal')
+    dlg.show()
+}
+
+const onChangeState = () => {
+    console.log("onChangeState", bus_changing.value)
+    
+    fetch("/api/arrivals/set", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            bus_id: bus_changing.value.bus_id,
+            state: !bus_changing.value.arrived
+        })
+    })
+    .then((resp) => {
+        if(resp.status === 200) {
+            updateData()
+        }
+        bus_changing.value = undefined
+    })
 }
 
 const stopTimer = () => {
-    if(timer.value) {
+    if(timer.value != undefined) {
         clearTimeout(timer.value)
         timer.value = undefined
     }
